@@ -106,12 +106,31 @@ dev.off()
 # Regressions:
 
 ols<-lm(meantherm~meanpresapp,data=StateFT)
-wls1<-lm(meantherm~meanpresapp,data=StateFT,weights=(1/log(StateFT$Nresp+1)))
-wls2<-lm(meantherm~meanpresapp,data=StateFT,weights=(1/StateFT$Nresp))
+wls1<-lm(meantherm~meanpresapp,data=StateFT,weights=(log(StateFT$Nresp+1)))
+wls2<-lm(meantherm~meanpresapp,data=StateFT,weights=(StateFT$Nresp))
 
 stargazer(ols,wls1,wls2,
           column.labels=c("OLS","WLS [1/ln(N)]","WLS [1/N]"),
           dep.var.labels="Mean Gay/Lesbian FTs")
+
+# Plot those:
+
+pdf("WLS-Scatter2.pdf",6,5)
+par(mar=c(4,4,2,2))
+with(StateFT, plot(meanpresapp,meantherm,pch=".",col="white",
+                   xlab="Mean Obama (Dis)Approval",
+                   ylab="Mean Gays+Lesbians FT",
+                   xlim=c(2,6)))
+with(StateFT, text(meanpresapp,meantherm,labels=StateFT$State,
+                   cex=0.3*log(StateFT$Nresp+1)))
+abline(ols,lwd=2)
+abline(wls1,lwd=2,lty=2,col="blue")
+abline(wls2,lwd=2,lty=3,col="orange")
+legend("bottomleft",bty="n",lty=c(1,2,3),lwd=2,
+       col=c("black","blue","orange"),
+       legend=c("OLS","WLS [weights=ln(N)]","WLS [weights=N]"))
+dev.off()
+
 
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 # What do "robust" SEs do? A simulation...    ####
