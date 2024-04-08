@@ -3,8 +3,7 @@
 #
 # PLSC 503 -- Spring 2024
 #
-# Regression models for nominal- and
-# ordinal-level outcomes...
+# Regression models for nominal-level outcomes...
 #
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 # Packages, etc.
@@ -122,7 +121,7 @@ summary(NES92.clogit2)
 
 
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Interpretation!
+# Interpretation!             ####
 
 NES.MNL<-vglm(PresVote~PartyID+Age+White+Female,data=NES92,
               multinomial(refLevel=1)) # Bush is comparison category
@@ -178,11 +177,12 @@ spm(~Bush+Clinton+Perot,pch=20,plot.points=TRUE,
     diagonal="histogram",col=c("black","grey"))
 dev.off()
 
-pdf("InSampleMNLPredProbsR.pdf",8,6)
+pdf("InSampleMNLPredProbsR.pdf",6,4)
 par(mfrow=c(1,3))
-plot(NES92$PartyID,Bush,xlab="Party ID")
-plot(NES92$PartyID,Clinton,xlab="Party ID")
-plot(NES92$PartyID,Perot,xlab="Party ID")
+par(mar=c(4,4,2,2))
+plot(NES92$PartyID,Bush,xlab="Party ID",pch=20)
+plot(NES92$PartyID,Clinton,xlab="Party ID",pch=20)
+plot(NES92$PartyID,Perot,xlab="Party ID",pch=20)
 par(mfrow=c(1,1))
 dev.off()
 
@@ -208,7 +208,7 @@ Hats<-mnl_pred_ova(model=MNL.alt2,data=NES92,
 cand.labs <- c("Bush", "Clinton", "Perot")
 names(cand.labs) <- c("1", "2", "3")
 
-pdf("MNLPredictedProbabilities.pdf",8,6)
+pdf("MNLPredictedProbabilities.pdf",7,5)
 ggplot(data=Hats$plotdata,aes(x=PartyID,y=mean,
             ymin=lower,ymax=upper)) +
   geom_ribbon(alpha = 0.1) +
@@ -235,6 +235,8 @@ dev.off()
 
 # Conditional logit: In-sample predictions:
 
+summary(NES92.clogit2)
+
 CLhats<-predict(NES92.clogit2,AltNES92)
 
 # Plot by candidate:
@@ -256,133 +258,5 @@ legend("topleft",bty="n",c("Bush","Clinton","Perot"),
        col=c("red","blue","darkgreen"),pch=c(19,4,17))
 dev.off()
 
-
-
-#=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-#=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Ordinal-response models...                          ####
-# 
-# GOP Thermometer score plot:
-
-ANES<-read_csv("https://raw.githubusercontent.com/PrisonRodeo/PLSC503-2024-git/master/Data/ANES-pilot-2016.csv")
-
-ANES$ftjeb<-ifelse(ANES$ftjeb==998,NA,ANES$ftjeb)
-
-pdf("Notes/ANES-FT-Jeb-2016.pdf",7,6)
-par(mar=c(4,4,2,2))
-hist(ANES$ftjeb,breaks=seq(0,100,by=1),main="",
-     xlab="Feeling Thermometer Score for Jeb!")
-dev.off()
-
-#=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Ordered simulation:
-
-set.seed(7222009)
-X<-runif(1000,0,10)
-Ystar<-0 + 1*X + rnorm(1000)
-Y1<-Ystar
-Y1[Ystar<2.5]<-1
-Y1[Ystar>=2.5 & Ystar<5]<-2
-Y1[Ystar>=5 & Ystar<7.5]<-3
-Y1[Ystar>=7.5]<-4
-table(Y1)
-
-summary(lm(Ystar~X))
-summary(lm(Y1~X))
-
-pdf("OrdinalOneR.pdf",7,5)
-par(mar=c(4,4,2,2))
-par(mfrow=c(1,2))
-plot(X,Ystar,pch=20,xlab="X",ylab="Y*")
-abline(lm(Ystar~X),lwd=3,col="red")
-abline(h=c(2.5,5,7.5),lty=2)
-plot(X,Y1,pch=20,xlab="X",ylab="Y1")
-abline(lm(Y1~X),lwd=3,col="red")
-dev.off()
-
-Y2<-Ystar
-Y2[Ystar<2]<-1
-Y2[Ystar>=2 & Ystar<8]<-2
-Y2[Ystar>=8 & Ystar<9]<-3
-Y2[Ystar>9]<-4
-table(Y2)
-
-summary(lm(Y2~X))
-
-pdf("OrdinalTwoR.pdf",7,5)
-par(mar=c(4,4,2,2))
-par(mfrow=c(1,2))
-plot(X,Ystar,pch=20,xlab="X",ylab="Y*")
-abline(lm(Ystar~X),lwd=3,col="red")
-abline(h=c(2,8,9),lty=2)
-plot(X,Y2,pch=20,xlab="X",ylab="Y2")
-abline(lm(Y2~X),lwd=3,col="red")
-dev.off()
-
-#=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Best Example Ever...                            ####
-
-beer<-read_csv("https://raw.githubusercontent.com/PrisonRodeo/PLSC503-2023-git/master/Data/Beer.csv")
-
-summary(beer)
-
-beer.logit<-polr(as.factor(quality)~price+calories+craftbeer
-                 +bitter+malty,data=beer)
-summary(beer.logit)
-
-beer.probit<-polr(as.factor(quality)~price+calories+craftbeer+
-                    bitter+malty,data=beer,method="probit")
-summary(beer.probit)
-
-# Odds Ratios
-
-olreg.or <- function(model) { 
-  coeffs <- coef(summary(beer.logit)) 
-  lci <- exp(coeffs[ ,1] - 1.96 * coeffs[ ,2]) 
-  or <- exp(coeffs[ ,1]) 
-  uci <- exp(coeffs[ ,1] + 1.96 * coeffs[ ,2]) 
-  lreg.or <- cbind(lci, or, uci) 
-  lreg.or 
-} 
-
-olreg.or(beer.logit)
-
-# Predicted probs
-
-calories<-seq(60,200,1)
-price<-mean(beer$price)
-craftbeer<-median(beer$craftbeer)
-bitter<-mean(beer$bitter)
-malty<-mean(beer$malty)
-beersim<-cbind(calories,price,craftbeer,bitter,malty)
-beer.hat<-predict(beer.logit,beersim,type='probs')
-
-pdf("ROrdinalProbs.pdf",6,5)
-par(mar=c(4,4,2,2))
-plot(c(60,200), c(0,1), type='n', xlab="Calories", ylab='Fitted 
-     Probability')
-lines(60:200, beer.hat[1:141, 1], lty=1, lwd=3)
-lines(60:200, beer.hat[1:141, 2], lty=2, lwd=3)
-lines(60:200, beer.hat[1:141, 3], lty=3, lwd=3)
-lines(60:200, beer.hat[1:141, 4], lty=4, lwd=3)
-dev.off()
-
-# Cumulative probs:
-
-xaxis<-c(60,60:200,200)
-yaxis1<-c(0,beer.hat[,1],0)
-yaxis2<-c(0,beer.hat[,2]+beer.hat[,1],0)
-yaxis3<-c(0,beer.hat[,3]+beer.hat[,2]+beer.hat[,1],0)
-yaxis4<-c(0,beer.hat[,4]+beer.hat[,3]+beer.hat[,2]+beer.hat[,1],0)
-
-pdf("ROrdinalCumProbs.pdf",6,5)
-par(mar=c(4,4,2,2))
-plot(c(60,200), c(0,1), type='n', xlab="Calories", 
-     ylab="Cumulative Probability")
-polygon(xaxis,yaxis4,col="white")
-polygon(xaxis,yaxis3,col="grey80")
-polygon(xaxis,yaxis2,col="grey50")
-polygon(xaxis,yaxis1,col="grey10")
-dev.off()
 
 # /fin
